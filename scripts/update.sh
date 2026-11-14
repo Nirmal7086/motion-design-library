@@ -193,6 +193,9 @@ refresh_submodule() {
     git -C "$path" checkout --detach "$sha"
   else
     echo "submodule pin ${path} <= ${sha} (not checked out)"
+    # An empty directory matches a normal clone, where git leaves the
+    # submodule path in place until `git submodule update --init`.
+    mkdir -p "$path"
   fi
   git update-index --add --cacheinfo "160000,${sha},${path}"
 }
