@@ -1,0 +1,5010 @@
+/**
+ * Tests Two.js Utilities related to Svg Interpretation:
+ * + two.load()
+ * + two.interpret()
+ * + polygon.subdivide()
+ */
+
+(function () {
+  QUnit.module('SvgInterpreter');
+
+  QUnit.test('Two.load', function (assert) {
+    assert.expect(1);
+    assert.done = assert.async(1);
+
+    var two = new Two({
+      width: 400,
+      height: 400,
+    });
+
+    two.load('./images/interpretation/D.svg', function (scene, svg) {
+      const shape = scene.children[0];
+      shape.center();
+
+      var answer = {
+        children: [
+          {
+            vertices: [
+              {
+                x: -77.9515,
+                y: 150,
+                command: 'M',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                rx: 0,
+                ry: 0,
+                xAxisRotation: 0,
+                largeArcFlag: 0,
+                sweepFlag: 1,
+              },
+              {
+                x: -77.8935,
+                y: -150,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 77.899, y: 0 } },
+                rx: 0,
+                ry: 0,
+                xAxisRotation: 0,
+                largeArcFlag: 0,
+                sweepFlag: 1,
+              },
+              {
+                x: 77.9515,
+                y: -81.117,
+                command: 'C',
+                relative: true,
+                controls: { left: { x: 0, y: -67.354 }, right: { x: 0, y: 0 } },
+                rx: 0,
+                ry: 0,
+                xAxisRotation: 0,
+                largeArcFlag: 0,
+                sweepFlag: 1,
+              },
+              {
+                x: 77.9515,
+                y: 73.965,
+                command: 'C',
+                relative: true,
+                controls: {
+                  left: { x: 0, y: -75.976 },
+                  right: { x: -0.001, y: 75.976 },
+                },
+                rx: 0,
+                ry: 0,
+                xAxisRotation: 0,
+                largeArcFlag: 0,
+                sweepFlag: 1,
+              },
+              {
+                x: -77.9515,
+                y: 150,
+                command: 'C',
+                relative: true,
+                controls: { left: { x: 77.957, y: 0 }, right: { x: 0, y: 0 } },
+                rx: 0,
+                ry: 0,
+                xAxisRotation: 0,
+                largeArcFlag: 0,
+                sweepFlag: 1,
+              },
+            ],
+            fill: 'none',
+            stroke: '#333333',
+            linewidth: 10,
+            opacity: 1,
+            visible: true,
+            cap: 'round',
+            join: 'round',
+            miter: '10',
+            closed: true,
+            curved: false,
+            automatic: false,
+            beginning: 0,
+            ending: 1,
+            className: '',
+            translation: { x: -3.54003907432e-6, y: 0 },
+            rotation: 0,
+            scale: 1,
+            skewX: 0,
+            skewY: 0,
+          },
+        ],
+        translation: { x: 200, y: 200 },
+        rotation: 0,
+        scale: { x: 1, y: 1 },
+        opacity: 1,
+        className: '',
+        mask: {
+          vertices: [
+            {
+              x: 0,
+              y: 0,
+              command: 'M',
+              relative: true,
+              controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              rx: 0,
+              ry: 0,
+              xAxisRotation: 0,
+              largeArcFlag: 0,
+              sweepFlag: 1,
+            },
+            {
+              x: 400,
+              y: 0,
+              command: 'L',
+              relative: true,
+              controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              rx: 0,
+              ry: 0,
+              xAxisRotation: 0,
+              largeArcFlag: 0,
+              sweepFlag: 1,
+            },
+            {
+              x: 400,
+              y: 400,
+              command: 'L',
+              relative: true,
+              controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              rx: 0,
+              ry: 0,
+              xAxisRotation: 0,
+              largeArcFlag: 0,
+              sweepFlag: 1,
+            },
+            {
+              x: 0,
+              y: 400,
+              command: 'L',
+              relative: true,
+              controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              rx: 0,
+              ry: 0,
+              xAxisRotation: 0,
+              largeArcFlag: 0,
+              sweepFlag: 1,
+            },
+          ],
+          fill: '#fff',
+          stroke: '#000',
+          linewidth: 1,
+          opacity: 1,
+          visible: true,
+          cap: 'butt',
+          join: 'miter',
+          miter: 4,
+          closed: true,
+          curved: false,
+          automatic: false,
+          beginning: 0,
+          ending: 1,
+          className: '',
+          translation: { x: -200.0005035400391, y: -200 },
+          rotation: 0,
+          scale: 1,
+          skewX: 0,
+          skewY: 0,
+          width: 400,
+          height: 400,
+          origin: { x: -200, y: -200 },
+        },
+      };
+      shape.translation.set(two.width / 2, two.height / 2);
+      two.add(shape).update();
+
+      assert.ok(
+        QUnit.Utils.shapeEquals(answer, shape),
+        'Two.load loads SVG files properly.'
+      );
+
+      assert.done();
+
+      QUnit.Utils.addElemToTest(assert.test, [two.renderer.domElement, svg]);
+    });
+  });
+
+  QUnit.test('Two.interpret', function (assert) {
+    assert.expect(10);
+    assert.done = assert.async(10);
+
+    (function () {
+      var two = new Two({
+        width: 400,
+        height: 400,
+      });
+
+      QUnit.Utils.get('./images/interpretation/D.svg', function (resp) {
+        var answer = {
+          children: [
+            {
+              vertices: [
+                {
+                  x: -77.9515,
+                  y: 150,
+                  command: 'M',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                },
+                {
+                  x: -77.8935,
+                  y: -150,
+                  command: 'L',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: 0 },
+                    right: { x: 77.899, y: 0 },
+                  },
+                },
+                {
+                  x: 77.9515,
+                  y: -81.117,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -67.354 },
+                    right: { x: 0, y: 0 },
+                  },
+                },
+                {
+                  x: 77.9515,
+                  y: 73.965,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -75.976 },
+                    right: { x: -0.001, y: 75.976 },
+                  },
+                },
+                {
+                  x: -77.9515,
+                  y: 150,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 77.957, y: 0 },
+                    right: { x: 0, y: 0 },
+                  },
+                },
+              ],
+              fill: 'none',
+              stroke: '#333333',
+              linewidth: 10,
+              opacity: 1,
+              visible: true,
+              cap: 'round',
+              join: 'round',
+              miter: '10',
+              closed: true,
+              curved: false,
+              automatic: false,
+              beginning: 0,
+              ending: 1,
+              className: '',
+              translation: { x: 200.0005, y: 200 },
+              rotation: 0,
+              scale: 1,
+              skewX: 0,
+              skewY: 0,
+            },
+          ],
+          translation: { x: 0, y: 0 },
+          rotation: 0,
+          scale: { x: 1, y: 1 },
+          opacity: 1,
+          className: '',
+          mask: {
+            vertices: [
+              {
+                x: 0,
+                y: 0,
+                command: 'M',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 400,
+                y: 0,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 400,
+                y: 400,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 0,
+                y: 400,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+            ],
+            fill: '#fff',
+            stroke: '#000',
+            linewidth: 1,
+            opacity: 1,
+            visible: true,
+            cap: 'butt',
+            join: 'miter',
+            miter: 4,
+            closed: true,
+            curved: false,
+            automatic: false,
+            beginning: 0,
+            ending: 1,
+            className: '',
+            translation: { x: 0, y: 0 },
+            rotation: 0,
+            scale: 1,
+            skewX: 0,
+            skewY: 0,
+            width: 400,
+            height: 400,
+            origin: { x: -200, y: -200 },
+          },
+        };
+        var svg = QUnit.Utils.textToDOM(resp)[0];
+        var shape = two.interpret(svg);
+
+        two.update();
+
+        assert.ok(
+          QUnit.Utils.shapeEquals(answer, shape),
+          'Two.interpret imports <path> properly.'
+        );
+        assert.done();
+
+        QUnit.Utils.addElemToTest(assert.test, [two.renderer.domElement, svg]);
+      });
+    })();
+
+    (function () {
+      var two = new Two({
+        width: 400,
+        height: 400,
+      });
+
+      QUnit.Utils.get('./images/interpretation/K.svg', function (resp) {
+        var answer = {
+          children: [
+            {
+              vertices: [
+                {
+                  x: 416.146,
+                  y: 350,
+                  command: 'M',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                },
+                {
+                  x: 415.862,
+                  y: 650,
+                  command: 'L',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                },
+              ],
+              fill: 'none',
+              stroke: '#333333',
+              linewidth: 10,
+              opacity: 1,
+              visible: true,
+              cap: 'round',
+              join: 'round',
+              miter: '10',
+              closed: false,
+              curved: false,
+              automatic: false,
+              beginning: 0,
+              ending: 1,
+              className: '',
+              translation: { x: -300, y: -300 },
+              rotation: 0,
+              scale: 1,
+              skewX: 0,
+              skewY: 0,
+            },
+            {
+              vertices: [
+                {
+                  x: 570.858,
+                  y: 350,
+                  command: 'M',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                },
+                {
+                  x: 415.961,
+                  y: 544.669,
+                  command: 'L',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                },
+              ],
+              fill: 'none',
+              stroke: '#333333',
+              linewidth: 10,
+              opacity: 1,
+              visible: true,
+              cap: 'round',
+              join: 'round',
+              miter: '10',
+              closed: false,
+              curved: false,
+              automatic: false,
+              beginning: 0,
+              ending: 1,
+              className: '',
+              translation: { x: -300, y: -300 },
+              rotation: 0,
+              scale: 1,
+              skewX: 0,
+              skewY: 0,
+            },
+            {
+              vertices: [
+                {
+                  x: 469.29,
+                  y: 477.828,
+                  command: 'M',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                },
+                {
+                  x: 584.138,
+                  y: 650,
+                  command: 'L',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                },
+              ],
+              fill: 'none',
+              stroke: '#333333',
+              linewidth: 10,
+              opacity: 1,
+              visible: true,
+              cap: 'round',
+              join: 'round',
+              miter: '10',
+              closed: false,
+              curved: false,
+              automatic: false,
+              beginning: 0,
+              ending: 1,
+              className: '',
+              translation: { x: -300, y: -300 },
+              rotation: 0,
+              scale: 1,
+              skewX: 0,
+              skewY: 0,
+            },
+          ],
+          translation: { x: 0, y: 0 },
+          rotation: 0,
+          scale: { x: 1, y: 1 },
+          opacity: 1,
+          className: '',
+          mask: {
+            vertices: [
+              {
+                x: 0,
+                y: 0,
+                command: 'M',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 400,
+                y: 0,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 400,
+                y: 400,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 0,
+                y: 400,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+            ],
+            fill: '#fff',
+            stroke: '#000',
+            linewidth: 1,
+            opacity: 1,
+            visible: true,
+            cap: 'butt',
+            join: 'miter',
+            miter: 4,
+            closed: true,
+            curved: false,
+            automatic: false,
+            beginning: 0,
+            ending: 1,
+            className: '',
+            translation: { x: 0, y: 0 },
+            rotation: 0,
+            scale: 1,
+            skewX: 0,
+            skewY: 0,
+            width: 400,
+            height: 400,
+            origin: { x: -200, y: -200 },
+          },
+        };
+        var svg = QUnit.Utils.textToDOM(resp)[0];
+        var shape = two.interpret(svg);
+
+        two.update();
+
+        assert.ok(
+          QUnit.Utils.shapeEquals(answer, shape),
+          'Two.interpret imports <line> properly.'
+        );
+        assert.done();
+
+        QUnit.Utils.addElemToTest(assert.test, [two.renderer.domElement, svg]);
+      });
+    })();
+
+    (function () {
+      var two = new Two({
+        width: 400,
+        height: 400,
+      });
+
+      QUnit.Utils.get('./images/interpretation/circle.svg', function (resp) {
+        var answer = {
+          children: [
+            {
+              vertices: [
+                {
+                  x: 100,
+                  y: 0,
+                  command: 'M',
+                  relative: true,
+                  controls: {
+                    left: { x: 3.381768755491e-15, y: -55.2284749831 },
+                    right: { x: 3.381768755491e-15, y: 55.2284749831 },
+                  },
+                },
+                {
+                  x: 6.123233995737e-15,
+                  y: 100,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 55.2284749831, y: 0 },
+                    right: { x: -55.2284749831, y: 6.763537510982e-15 },
+                  },
+                },
+                {
+                  x: -100,
+                  y: 1.224646799147e-14,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 3.381768755491e-15, y: 55.2284749831 },
+                    right: { x: -1.014530626647e-14, y: -55.2284749831 },
+                  },
+                },
+                {
+                  x: -1.836970198721e-14,
+                  y: -100,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -55.2284749831, y: 6.763537510982e-15 },
+                    right: { x: 55.2284749831, y: -1.352707502196e-14 },
+                  },
+                },
+              ],
+              fill: '#EF4142',
+              stroke: '#00AEEF',
+              linewidth: 25,
+              opacity: 1,
+              visible: true,
+              cap: 'butt',
+              join: 'miter',
+              miter: '10',
+              closed: true,
+              curved: true,
+              automatic: false,
+              beginning: 0,
+              ending: 1,
+              className: '',
+              translation: { x: 200, y: 200 },
+              rotation: 0,
+              scale: 1,
+              skewX: 0,
+              skewY: 0,
+              radius: 100,
+            },
+          ],
+          translation: { x: 0, y: 0 },
+          rotation: 0,
+          scale: { x: 1, y: 1 },
+          opacity: 1,
+          className: '',
+          mask: {
+            vertices: [
+              {
+                x: 0,
+                y: 0,
+                command: 'M',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 400,
+                y: 0,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 400,
+                y: 400,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 0,
+                y: 400,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+            ],
+            fill: '#fff',
+            stroke: '#000',
+            linewidth: 1,
+            opacity: 1,
+            visible: true,
+            cap: 'butt',
+            join: 'miter',
+            miter: 4,
+            closed: true,
+            curved: false,
+            automatic: false,
+            beginning: 0,
+            ending: 1,
+            className: '',
+            translation: { x: 0, y: 0 },
+            rotation: 0,
+            scale: 1,
+            skewX: 0,
+            skewY: 0,
+            width: 400,
+            height: 400,
+            origin: { x: -200, y: -200 },
+          },
+        };
+        var svg = QUnit.Utils.textToDOM(resp)[0];
+        var shape = two.interpret(svg);
+
+        two.update();
+
+        assert.ok(
+          QUnit.Utils.shapeEquals(answer, shape),
+          'Two.interpret imports <circle> properly.'
+        );
+        assert.done();
+
+        QUnit.Utils.addElemToTest(assert.test, [two.renderer.domElement, svg]);
+      });
+    })();
+
+    (function () {
+      var two = new Two({
+        width: 400,
+        height: 400,
+      });
+
+      QUnit.Utils.get('./images/interpretation/rect.svg', function (resp) {
+        var answer = {
+          children: [
+            {
+              vertices: [
+                {
+                  x: -100,
+                  y: -100,
+                  command: 'M',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                },
+                {
+                  x: 100,
+                  y: -100,
+                  command: 'L',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                },
+                {
+                  x: 100,
+                  y: 100,
+                  command: 'L',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                },
+                {
+                  x: -100,
+                  y: 100,
+                  command: 'L',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                },
+              ],
+              fill: '#F7941E',
+              linewidth: 1,
+              opacity: 1,
+              visible: true,
+              cap: 'butt',
+              join: 'miter',
+              miter: 4,
+              closed: true,
+              curved: false,
+              automatic: false,
+              beginning: 0,
+              ending: 1,
+              className: '',
+              translation: { x: 200, y: 200 },
+              rotation: 0,
+              scale: 1,
+              skewX: 0,
+              skewY: 0,
+              width: 200,
+              height: 200,
+              origin: { x: 0, y: 0 },
+            },
+          ],
+          translation: { x: 0, y: 0 },
+          rotation: 0,
+          scale: { x: 1, y: 1 },
+          opacity: 1,
+          className: '',
+          mask: {
+            vertices: [
+              {
+                x: 0,
+                y: 0,
+                command: 'M',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 400,
+                y: 0,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 400,
+                y: 400,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 0,
+                y: 400,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+            ],
+            fill: '#fff',
+            stroke: '#000',
+            linewidth: 1,
+            opacity: 1,
+            visible: true,
+            cap: 'butt',
+            join: 'miter',
+            miter: 4,
+            closed: true,
+            curved: false,
+            automatic: false,
+            beginning: 0,
+            ending: 1,
+            className: '',
+            translation: { x: 0, y: 0 },
+            rotation: 0,
+            scale: 1,
+            skewX: 0,
+            skewY: 0,
+            width: 400,
+            height: 400,
+            origin: { x: -200, y: -200 },
+          },
+        };
+        var svg = QUnit.Utils.textToDOM(resp)[0];
+        var shape = two.interpret(svg);
+
+        two.update();
+
+        assert.ok(
+          QUnit.Utils.shapeEquals(answer, shape),
+          'Two.interpret imports <rect> properly.'
+        );
+        assert.done();
+
+        QUnit.Utils.addElemToTest(assert.test, [two.renderer.domElement, svg]);
+      });
+    })();
+
+    (function () {
+      var two = new Two({
+        width: 400,
+        height: 400,
+      });
+
+      QUnit.Utils.get('./images/interpretation/ellipse.svg', function (resp) {
+        var answer = {
+          children: [
+            {
+              vertices: [
+                {
+                  x: 150,
+                  y: 0,
+                  command: 'M',
+                  relative: true,
+                  controls: {
+                    left: { x: 5.072653133236e-15, y: -42.469040408 },
+                    right: { x: 5.072653133236e-15, y: 42.469040408 },
+                  },
+                },
+                {
+                  x: 9.184850993605e-15,
+                  y: 76.897,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 82.842712475, y: 0 },
+                    right: { x: -82.842712475, y: 5.20095743982e-15 },
+                  },
+                },
+                {
+                  x: -150,
+                  y: 9.417166491403e-15,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 5.072653133236e-15, y: 42.469040408 },
+                    right: { x: -1.521795939971e-14, y: -42.469040408 },
+                  },
+                },
+                {
+                  x: -2.755455298082e-14,
+                  y: -76.897,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -82.842712475, y: 5.20095743982e-15 },
+                    right: { x: 82.842712475, y: -1.040191487964e-14 },
+                  },
+                },
+              ],
+              fill: '#92278F',
+              linewidth: 1,
+              opacity: 0.5,
+              visible: true,
+              cap: 'butt',
+              join: 'miter',
+              miter: 4,
+              closed: true,
+              curved: true,
+              automatic: false,
+              beginning: 0,
+              ending: 1,
+              className: '',
+              translation: { x: 200, y: 200 },
+              rotation: 0,
+              scale: 1,
+              skewX: 0,
+              skewY: 0,
+              width: 300,
+              height: 153.794,
+            },
+          ],
+          translation: { x: 0, y: 0 },
+          rotation: 0,
+          scale: { x: 1, y: 1 },
+          opacity: 1,
+          className: '',
+          mask: {
+            vertices: [
+              {
+                x: 0,
+                y: 0,
+                command: 'M',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 400,
+                y: 0,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 400,
+                y: 400,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 0,
+                y: 400,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+            ],
+            fill: '#fff',
+            stroke: '#000',
+            linewidth: 1,
+            opacity: 1,
+            visible: true,
+            cap: 'butt',
+            join: 'miter',
+            miter: 4,
+            closed: true,
+            curved: false,
+            automatic: false,
+            beginning: 0,
+            ending: 1,
+            className: '',
+            translation: { x: 0, y: 0 },
+            rotation: 0,
+            scale: 1,
+            skewX: 0,
+            skewY: 0,
+            width: 400,
+            height: 400,
+            origin: { x: -200, y: -200 },
+          },
+        };
+        var svg = QUnit.Utils.textToDOM(resp)[0];
+        var shape = two.interpret(svg);
+
+        two.update();
+
+        assert.ok(
+          QUnit.Utils.shapeEquals(answer, shape),
+          'Two.interpret imports <ellipse> properly.'
+        );
+        assert.done();
+
+        QUnit.Utils.addElemToTest(assert.test, [two.renderer.domElement, svg]);
+      });
+    })();
+
+    (function () {
+      var two = new Two({
+        width: 400,
+        height: 400,
+      });
+
+      QUnit.Utils.get('./images/interpretation/polyline.svg', function (resp) {
+        var answer = {
+          children: [
+            {
+              vertices: [
+                { x: 20.079, y: 104.42, command: 'M', relative: true },
+                { x: 47.352, y: 104.42, command: 'L', relative: true },
+                { x: 47.352, y: 90.785, command: 'L', relative: true },
+                { x: 74.625, y: 90.785, command: 'L', relative: true },
+                { x: 74.625, y: 104.42, command: 'L', relative: true },
+                { x: 101.897, y: 104.42, command: 'L', relative: true },
+                { x: 101.897, y: 70.33, command: 'L', relative: true },
+                { x: 129.17, y: 70.33, command: 'L', relative: true },
+                { x: 129.17, y: 104.42, command: 'L', relative: true },
+                { x: 156.442, y: 104.42, command: 'L', relative: true },
+                { x: 156.442, y: 49.875, command: 'L', relative: true },
+                { x: 183.715, y: 49.875, command: 'L', relative: true },
+                { x: 183.715, y: 104.42, command: 'L', relative: true },
+                { x: 210.988, y: 104.42, command: 'L', relative: true },
+                { x: 210.988, y: 29.42, command: 'L', relative: true },
+                { x: 238.26, y: 29.42, command: 'L', relative: true },
+                { x: 238.26, y: 104.42, command: 'L', relative: true },
+                { x: 265.534, y: 104.42, command: 'L', relative: true },
+                { x: 265.534, y: 8.965, command: 'L', relative: true },
+                { x: 292.805, y: 8.965, command: 'L', relative: true },
+                { x: 292.805, y: 104.42, command: 'L', relative: true },
+                { x: 320.079, y: 104.42, command: 'L', relative: true },
+              ],
+              fill: 'none',
+              stroke: '#0000FF',
+              linewidth: 10,
+              opacity: 1,
+              visible: true,
+              cap: 'butt',
+              join: 'miter',
+              miter: 4,
+              closed: false,
+              curved: false,
+              automatic: true,
+              beginning: 0,
+              ending: 1,
+              className: '',
+              translation: { x: 29.921, y: 143.307 },
+              rotation: 0,
+              scale: 1,
+              skewX: 0,
+              skewY: 0,
+            },
+          ],
+          translation: { x: 0, y: 0 },
+          rotation: 0,
+          scale: { x: 1, y: 1 },
+          opacity: 1,
+          className: '',
+          mask: {
+            vertices: [
+              {
+                x: 0,
+                y: 0,
+                command: 'M',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 400,
+                y: 0,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 400,
+                y: 400,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 0,
+                y: 400,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+            ],
+            fill: '#fff',
+            stroke: '#000',
+            linewidth: 1,
+            opacity: 1,
+            visible: true,
+            cap: 'butt',
+            join: 'miter',
+            miter: 4,
+            closed: true,
+            curved: false,
+            automatic: false,
+            beginning: 0,
+            ending: 1,
+            className: '',
+            translation: { x: 0, y: 0 },
+            rotation: 0,
+            scale: 1,
+            skewX: 0,
+            skewY: 0,
+            width: 400,
+            height: 400,
+            origin: { x: -200, y: -200 },
+          },
+        };
+        var svg = QUnit.Utils.textToDOM(resp)[0];
+        var shape = two.interpret(svg);
+
+        two.update();
+
+        assert.ok(
+          QUnit.Utils.shapeEquals(answer, shape),
+          'Two.interpret imports <polyline> properly.'
+        );
+        assert.done();
+
+        QUnit.Utils.addElemToTest(assert.test, [two.renderer.domElement, svg]);
+      });
+    })();
+
+    (function () {
+      var two = new Two({
+        width: 400,
+        height: 400,
+      });
+
+      QUnit.Utils.get('./images/interpretation/polygon.svg', function (resp) {
+        var answer = {
+          children: [
+            {
+              vertices: [
+                { x: 99.212, y: 21.26, command: 'M', relative: true },
+                { x: 107.433, y: 45.638, command: 'L', relative: true },
+                { x: 132.945, y: 45.638, command: 'L', relative: true },
+                { x: 112.536, y: 60.945, command: 'L', relative: true },
+                { x: 119.905, y: 85.323, command: 'L', relative: true },
+                { x: 99.212, y: 70.867, command: 'L', relative: true },
+                { x: 78.52, y: 85.323, command: 'L', relative: true },
+                { x: 85.89, y: 60.945, command: 'L', relative: true },
+                { x: 65.48, y: 45.638, command: 'L', relative: true },
+                { x: 90.992, y: 45.638, command: 'L', relative: true },
+              ],
+              fill: '#FF0000',
+              linewidth: 1,
+              opacity: 1,
+              visible: true,
+              cap: 'butt',
+              join: 'miter',
+              miter: 4,
+              closed: true,
+              curved: false,
+              automatic: true,
+              beginning: 0,
+              ending: 1,
+              className: '',
+              translation: { x: 29.921, y: 143.307 },
+              rotation: 0,
+              scale: 1,
+              skewX: 0,
+              skewY: 0,
+            },
+            {
+              vertices: [
+                { x: 240.945, y: 21.26, command: 'M', relative: true },
+                { x: 271.559, y: 38.977, command: 'L', relative: true },
+                { x: 271.559, y: 74.41, command: 'L', relative: true },
+                { x: 240.945, y: 92.126, command: 'L', relative: true },
+                { x: 210.331, y: 74.438, command: 'L', relative: true },
+                { x: 210.331, y: 38.977, command: 'L', relative: true },
+              ],
+              fill: '#00FF00',
+              linewidth: 1,
+              opacity: 1,
+              visible: true,
+              cap: 'butt',
+              join: 'miter',
+              miter: 4,
+              closed: true,
+              curved: false,
+              automatic: true,
+              beginning: 0,
+              ending: 1,
+              className: '',
+              translation: { x: 29.921, y: 143.307 },
+              rotation: 0,
+              scale: 1,
+              skewX: 0,
+              skewY: 0,
+            },
+          ],
+          translation: { x: 0, y: 0 },
+          rotation: 0,
+          scale: { x: 1, y: 1 },
+          opacity: 1,
+          className: '',
+          mask: {
+            vertices: [
+              {
+                x: 0,
+                y: 0,
+                command: 'M',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 400,
+                y: 0,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 400,
+                y: 400,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+              {
+                x: 0,
+                y: 400,
+                command: 'L',
+                relative: true,
+                controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+              },
+            ],
+            fill: '#fff',
+            stroke: '#000',
+            linewidth: 1,
+            opacity: 1,
+            visible: true,
+            cap: 'butt',
+            join: 'miter',
+            miter: 4,
+            closed: true,
+            curved: false,
+            automatic: false,
+            beginning: 0,
+            ending: 1,
+            className: '',
+            translation: { x: 0, y: 0 },
+            rotation: 0,
+            scale: 1,
+            skewX: 0,
+            skewY: 0,
+            width: 400,
+            height: 400,
+            origin: { x: -200, y: -200 },
+          },
+        };
+        var svg = QUnit.Utils.textToDOM(resp)[0];
+        var shape = two.interpret(svg);
+
+        two.update();
+
+        assert.ok(
+          QUnit.Utils.shapeEquals(answer, shape),
+          'Two.interpret imports <polygon> properly.'
+        );
+        assert.done();
+
+        QUnit.Utils.addElemToTest(assert.test, [two.renderer.domElement, svg]);
+      });
+    })();
+
+    (function () {
+      var two = new Two({
+        width: 400,
+        height: 400,
+      });
+
+      QUnit.Utils.get(
+        './images/interpretation/linear-gradient.svg',
+        function (resp) {
+          var answer = {
+            children: [
+              {
+                vertices: [
+                  {
+                    x: -100,
+                    y: -100,
+                    command: 'M',
+                    relative: true,
+                    controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                  },
+                  {
+                    x: 100,
+                    y: -100,
+                    command: 'L',
+                    relative: true,
+                    controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                  },
+                  {
+                    x: 100,
+                    y: 100,
+                    command: 'L',
+                    relative: true,
+                    controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                  },
+                  {
+                    x: -100,
+                    y: 100,
+                    command: 'L',
+                    relative: true,
+                    controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                  },
+                ],
+                fill: {
+                  stops: [
+                    { offset: 0, opacity: 1, color: '#000000' },
+                    { offset: 0.33, opacity: 1, color: '#FFF200' },
+                    { offset: 0.66, opacity: 1, color: '#EC008C' },
+                    { offset: 1, opacity: 1, color: '#00AEEF' },
+                  ],
+                  spread: 'pad',
+                  left: { x: -100, y: 0 },
+                  right: { x: 100, y: 0 },
+                },
+                linewidth: 1,
+                opacity: 1,
+                visible: true,
+                cap: 'butt',
+                join: 'miter',
+                miter: 4,
+                closed: true,
+                curved: false,
+                automatic: false,
+                beginning: 0,
+                ending: 1,
+                className: '',
+                translation: { x: 200, y: 200 },
+                rotation: 0,
+                scale: 1,
+                skewX: 0,
+                skewY: 0,
+                width: 200,
+                height: 200,
+                origin: { x: 0, y: 0 },
+              },
+            ],
+            translation: { x: 0, y: 0 },
+            rotation: 0,
+            scale: 1,
+            opacity: 1,
+            className: '',
+            mask: {
+              vertices: [
+                {
+                  x: 0,
+                  y: 0,
+                  command: 'M',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                },
+                {
+                  x: 400,
+                  y: 0,
+                  command: 'L',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                },
+                {
+                  x: 400,
+                  y: 400,
+                  command: 'L',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                },
+                {
+                  x: 0,
+                  y: 400,
+                  command: 'L',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                },
+              ],
+              fill: '#fff',
+              stroke: '#000',
+              linewidth: 1,
+              opacity: 1,
+              visible: true,
+              cap: 'butt',
+              join: 'miter',
+              miter: 4,
+              closed: true,
+              curved: false,
+              automatic: false,
+              beginning: 0,
+              ending: 1,
+              className: '',
+              translation: { x: 0, y: 0 },
+              rotation: 0,
+              scale: 1,
+              skewX: 0,
+              skewY: 0,
+              width: 400,
+              height: 400,
+              origin: { x: -200, y: -200 },
+            },
+          };
+          var svg = QUnit.Utils.textToDOM(resp)[0];
+          var shape = two.interpret(svg);
+
+          two.update();
+
+          assert.ok(
+            QUnit.Utils.shapeEquals(answer, shape),
+            'Two.interpret imports <linear-gradient> properly.'
+          );
+          assert.done();
+
+          QUnit.Utils.addElemToTest(assert.test, [
+            two.renderer.domElement,
+            svg,
+          ]);
+        }
+      );
+    })();
+
+    (function () {
+      var two = new Two({
+        width: 400,
+        height: 400,
+      });
+
+      QUnit.Utils.get(
+        './images/interpretation/radial-gradient.svg',
+        function (resp) {
+          var answer = {
+            children: [
+              {
+                stops: [
+                  { offset: 0, opacity: 1, color: '#000000' },
+                  { offset: 0.33, opacity: 1, color: '#FFF200' },
+                  { offset: 0.66, opacity: 1, color: '#EC008C' },
+                  { offset: 1, opacity: 1, color: '#00AEEF' },
+                ],
+                spread: 'pad',
+                radius: 100,
+                center: { x: 0, y: 0 },
+                focal: { x: 0, y: 0 },
+              },
+              {
+                vertices: [
+                  {
+                    x: -100,
+                    y: -100,
+                    command: 'M',
+                    relative: true,
+                    controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                  },
+                  {
+                    x: 100,
+                    y: -100,
+                    command: 'L',
+                    relative: true,
+                    controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                  },
+                  {
+                    x: 100,
+                    y: 100,
+                    command: 'L',
+                    relative: true,
+                    controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                  },
+                  {
+                    x: -100,
+                    y: 100,
+                    command: 'L',
+                    relative: true,
+                    controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                  },
+                ],
+                fill: {
+                  stops: [
+                    { offset: 0, opacity: 1, color: '#000000' },
+                    { offset: 0.33, opacity: 1, color: '#FFF200' },
+                    { offset: 0.66, opacity: 1, color: '#EC008C' },
+                    { offset: 1, opacity: 1, color: '#00AEEF' },
+                  ],
+                  spread: 'pad',
+                  radius: 100,
+                  center: { x: 0, y: 0 },
+                  focal: { x: 0, y: 0 },
+                },
+                linewidth: 1,
+                opacity: 1,
+                visible: true,
+                cap: 'butt',
+                join: 'miter',
+                miter: 4,
+                closed: true,
+                curved: false,
+                automatic: false,
+                beginning: 0,
+                ending: 1,
+                className: '',
+                translation: { x: 200, y: 200 },
+                rotation: 0,
+                scale: 1,
+                skewX: 0,
+                skewY: 0,
+                width: 200,
+                height: 200,
+                origin: { x: 0, y: 0 },
+              },
+            ],
+            translation: { x: 0, y: 0 },
+            rotation: 0,
+            scale: 1,
+            opacity: 1,
+            className: '',
+            mask: {
+              vertices: [
+                {
+                  x: 0,
+                  y: 0,
+                  command: 'M',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                },
+                {
+                  x: 400,
+                  y: 0,
+                  command: 'L',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                },
+                {
+                  x: 400,
+                  y: 400,
+                  command: 'L',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                },
+                {
+                  x: 0,
+                  y: 400,
+                  command: 'L',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                },
+              ],
+              fill: '#fff',
+              stroke: '#000',
+              linewidth: 1,
+              opacity: 1,
+              visible: true,
+              cap: 'butt',
+              join: 'miter',
+              miter: 4,
+              closed: true,
+              curved: false,
+              automatic: false,
+              beginning: 0,
+              ending: 1,
+              className: '',
+              translation: { x: 0, y: 0 },
+              rotation: 0,
+              scale: 1,
+              skewX: 0,
+              skewY: 0,
+              width: 400,
+              height: 400,
+              origin: { x: -200, y: -200 },
+            },
+          };
+          var svg = QUnit.Utils.textToDOM(resp)[0];
+          var shape = two.interpret(svg);
+
+          two.update();
+
+          assert.ok(
+            QUnit.Utils.shapeEquals(answer, shape),
+            'Two.interpret imports <radial-gradient> properly.'
+          );
+          assert.done();
+
+          QUnit.Utils.addElemToTest(assert.test, [
+            two.renderer.domElement,
+            svg,
+          ]);
+        }
+      );
+    })();
+
+    (function () {
+      var two = new Two({
+        width: 400,
+        height: 400,
+        type: Two.Types.canvas, //The font-size problem only occurs in canvas renderer
+      });
+
+      QUnit.Utils.get('./images/interpretation/text.svg', function (resp) {
+        var svg = QUnit.Utils.textToDOM(resp)[0];
+        const shape = two.interpret(svg);
+        two.update();
+
+        assert.equal(
+          shape.children[1].size,
+          144,
+          'Font size is extracted correctly'
+        );
+
+        assert.done();
+
+        QUnit.Utils.addElemToTest(assert.test, [two.renderer.domElement, svg]);
+      });
+    })();
+  });
+
+  QUnit.test('Two.interpret display and visibility', function (assert) {
+    var two = new Two({
+      width: 400,
+      height: 400,
+    });
+
+    var interpret = function (markup) {
+      var svg = QUnit.Utils.textToDOM(
+        '<svg xmlns="http://www.w3.org/2000/svg">' + markup + '</svg>'
+      )[0];
+      return two.interpret(svg.firstElementChild, false, false);
+    };
+
+    var rect = '<rect width="10" height="10" />';
+    var hidden = [
+      '<rect width="10" height="10" display="none" />',
+      '<rect width="10" height="10" style="display:none" />',
+      '<rect width="10" height="10" visibility="hidden" />',
+      '<rect width="10" height="10" style="visibility: hidden" />',
+      '<rect width="10" height="10" display="inline" visibility="hidden" />',
+      '<rect width="10" height="10" display="none" visibility="visible" />',
+    ];
+    var shown = [
+      rect,
+      '<rect width="10" height="10" display="inline" />',
+      '<rect width="10" height="10" visibility="visible" />',
+      '<rect width="10" height="10" style="display:block;visibility:visible" />',
+    ];
+
+    hidden.forEach(function (markup) {
+      assert.equal(interpret(markup).visible, false, markup + ' is hidden.');
+    });
+    shown.forEach(function (markup) {
+      assert.equal(interpret(markup).visible, true, markup + ' is visible.');
+    });
+
+    var group = interpret('<g visibility="hidden">' + rect + '</g>');
+    assert.equal(group.visible, false, '<g visibility="hidden"> is hidden.');
+    assert.equal(
+      group.children[0].visible,
+      false,
+      'Children inherit visibility="hidden" from their group.'
+    );
+
+    group = interpret(
+      '<g visibility="hidden"><rect visibility="visible" /></g>'
+    );
+    assert.equal(
+      group.children[0].visible,
+      true,
+      'A child can override the visibility of its group.'
+    );
+
+    group = interpret('<g style="display:none">' + rect + '</g>');
+    assert.equal(group.visible, false, '<g style="display:none"> is hidden.');
+    assert.equal(
+      group.children[0].visible,
+      true,
+      'Children do not inherit display, the hidden group hides them.'
+    );
+
+    // Styles from a stylesheet are only available through
+    // getComputedStyle on elements in the document.
+    var svg = QUnit.Utils.textToDOM(
+      '<svg xmlns="http://www.w3.org/2000/svg">' +
+        '<style>.gone { display: none; } .ghost { visibility: hidden; }</style>' +
+        '<rect class="gone" width="10" height="10" />' +
+        '<rect class="ghost" width="10" height="10" />' +
+        '<g class="ghost">' +
+        rect +
+        '</g>' +
+        rect +
+        '</svg>'
+    )[0];
+    document.body.appendChild(svg);
+    var shape = two.interpret(svg, false, false);
+    document.body.removeChild(svg);
+
+    assert.equal(
+      shape.children[0].visible,
+      false,
+      'display: none from a stylesheet hides the element.'
+    );
+    assert.equal(
+      shape.children[1].visible,
+      false,
+      'visibility: hidden from a stylesheet hides the element.'
+    );
+    assert.equal(
+      shape.children[2].children[0].visible,
+      false,
+      'visibility: hidden from a stylesheet is inherited.'
+    );
+    assert.equal(
+      shape.children[3].visible,
+      true,
+      'Elements without display or visibility are visible.'
+    );
+  });
+
+  QUnit.test('Two.subdivide', function (assert) {
+    assert.expect(3);
+    assert.done = assert.async(3);
+
+    (function () {
+      var two = new Two({
+        width: 400,
+        height: 400,
+      });
+
+      QUnit.Utils.get('./images/interpretation/D.svg', function (resp) {
+        var answer = {
+          children: [
+            {
+              isShape: true,
+              translation: { x: 200, y: 200 },
+              scale: 1,
+              skewX: 0,
+              skewY: 0,
+              vertices: [
+                {
+                  x: -77.9515,
+                  y: 150,
+                  command: 'M',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -77.950922,
+                  y: 147.007938,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -0.000378, y: 1.953999 },
+                    right: { x: 0.000377, y: -1.954 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -77.949281,
+                  y: 138.520252,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -0.000709, y: 3.663749 },
+                    right: { x: 0.000708, y: -3.66375 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -77.946719,
+                  y: 125.269692,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -0.000992, y: 5.129248 },
+                    right: { x: 0.000991, y: -5.129249 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -77.943378,
+                  y: 107.989008,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -0.001228, y: 6.350498 },
+                    right: { x: 0.001227, y: -6.350499 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -77.9394,
+                  y: 87.41095,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -0.001417, y: 7.327498 },
+                    right: { x: 0.001416, y: -7.327499 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -77.934926,
+                  y: 64.268267,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -0.001559, y: 8.060248 },
+                    right: { x: 0.001558, y: -8.060249 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -77.930097,
+                  y: 39.29371,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -0.001653, y: 8.548748 },
+                    right: { x: 0.001652, y: -8.548749 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -77.925056,
+                  y: 13.220028,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -0.0017, y: 8.792998 },
+                    right: { x: 0.001699, y: -8.792999 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -77.919945,
+                  y: -13.220029,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -0.0017, y: 8.792998 },
+                    right: { x: 0.001699, y: -8.792999 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -77.914904,
+                  y: -39.293711,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -0.001653, y: 8.548748 },
+                    right: { x: 0.001652, y: -8.548749 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -77.910075,
+                  y: -64.268268,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -0.001559, y: 8.060248 },
+                    right: { x: 0.001558, y: -8.060249 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -77.905601,
+                  y: -87.410951,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -0.001417, y: 7.327498 },
+                    right: { x: 0.001416, y: -7.327499 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -77.901623,
+                  y: -107.989009,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -0.001228, y: 6.350498 },
+                    right: { x: 0.001227, y: -6.350499 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -77.898282,
+                  y: -125.269693,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -0.000992, y: 5.129248 },
+                    right: { x: 0.000991, y: -5.129249 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -77.89572,
+                  y: -138.520253,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -0.000709, y: 3.663749 },
+                    right: { x: 0.000708, y: -3.66375 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -77.894079,
+                  y: -147.007939,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -0.000378, y: 1.953999 },
+                    right: { x: 0.000377, y: -1.954 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -77.8935,
+                  y: -150,
+                  command: 'L',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: 0 },
+                    right: { x: 4.582294, y: 0 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -64.162005,
+                  y: -149.971042,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -4.566745, y: -0.023669 },
+                    right: { x: 4.566744, y: 0.023668 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -50.524783,
+                  y: -149.831817,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -4.519446, y: -0.073511 },
+                    right: { x: 4.519445, y: 0.07351 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -37.077083,
+                  y: -149.503806,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -4.440397, y: -0.149527 },
+                    right: { x: 4.440396, y: 0.149526 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -23.914153,
+                  y: -148.908487,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -4.329599, y: -0.251716 },
+                    right: { x: 4.329598, y: 0.251715 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -11.131244,
+                  y: -147.967337,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -4.18705, y: -0.38008 },
+                    right: { x: 4.187049, y: 0.380079 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 1.176396,
+                  y: -146.601836,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -4.012753, y: -0.534617 },
+                    right: { x: 4.012752, y: 0.534616 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 12.913519,
+                  y: -144.733463,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -3.806705, y: -0.715328 },
+                    right: { x: 3.806704, y: 0.715327 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 23.984874,
+                  y: -142.283695,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -3.568908, y: -0.922213 },
+                    right: { x: 3.568907, y: 0.922212 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 34.295215,
+                  y: -139.174012,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -3.299361, y: -1.155272 },
+                    right: { x: 3.29936, y: 1.155271 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 43.74929,
+                  y: -135.325891,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -2.998065, y: -1.414505 },
+                    right: { x: 2.998064, y: 1.414504 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 52.251852,
+                  y: -130.660812,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -2.665019, y: -1.699911 },
+                    right: { x: 2.665018, y: 1.69991 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 59.707652,
+                  y: -125.100252,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -2.300223, y: -2.011492 },
+                    right: { x: 2.300222, y: 2.011491 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 66.02144,
+                  y: -118.565691,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -1.903678, y: -2.349246 },
+                    right: { x: 1.903677, y: 2.349245 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 71.097967,
+                  y: -110.978607,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -1.475383, y: -2.713174 },
+                    right: { x: 1.475382, y: 2.713173 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 74.841986,
+                  y: -102.260478,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -1.015339, y: -3.103275 },
+                    right: { x: 1.015338, y: 3.103274 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 77.158246,
+                  y: -92.332783,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -0.523544, y: -3.519551 },
+                    right: { x: 0.523543, y: 3.51955 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 77.9515,
+                  y: -81.117,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -3.962001 },
+                    right: { x: 0, y: 0 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 77.9515,
+                  y: -80.312569,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -0.530708 },
+                    right: { x: 0, y: 0.530707 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 77.9515,
+                  y: -77.96623,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -1.027939 },
+                    right: { x: 0, y: 1.027938 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 77.9515,
+                  y: -74.178413,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -1.491694 },
+                    right: { x: 0, y: 1.491693 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 77.9515,
+                  y: -69.049548,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -1.921971 },
+                    right: { x: 0, y: 1.92197 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 77.9515,
+                  y: -62.680068,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -2.318771 },
+                    right: { x: 0, y: 2.31877 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 77.9515,
+                  y: -55.170402,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -2.682095 },
+                    right: { x: 0, y: 2.682094 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 77.9515,
+                  y: -46.620981,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -3.011941 },
+                    right: { x: 0, y: 3.01194 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 77.9515,
+                  y: -37.132235,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -3.308311 },
+                    right: { x: 0, y: 3.30831 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 77.9515,
+                  y: -26.804596,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -3.571203 },
+                    right: { x: 0, y: 3.571202 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 77.9515,
+                  y: -15.738494,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -3.800619 },
+                    right: { x: 0, y: 3.800618 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 77.9515,
+                  y: -4.034361,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -3.996558 },
+                    right: { x: 0, y: 3.996557 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 77.9515,
+                  y: 8.207375,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -4.15902 },
+                    right: { x: 0, y: 4.159019 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 77.9515,
+                  y: 20.886281,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -4.288005 },
+                    right: { x: 0, y: 4.288004 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 77.9515,
+                  y: 33.901927,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -4.383514 },
+                    right: { x: 0, y: 4.383513 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 77.9515,
+                  y: 47.153883,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -4.445545 },
+                    right: { x: 0, y: 4.445544 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 77.9515,
+                  y: 60.541717,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -4.474099 },
+                    right: { x: 0, y: 4.474098 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 77.9515,
+                  y: 73.964999,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -4.469177 },
+                    right: { x: -0.000059, y: 4.469176 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 77.158078,
+                  y: 86.599903,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0.523601, y: -3.95924 },
+                    right: { x: -0.523602, y: 3.959239 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 74.841617,
+                  y: 97.751317,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 1.015418, y: -3.480184 },
+                    right: { x: -1.015419, y: 3.480183 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 71.09729,
+                  y: 107.511883,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 1.475511, y: -3.032008 },
+                    right: { x: -1.475512, y: 3.032007 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 66.020271,
+                  y: 115.974242,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 1.903879, y: -2.614712 },
+                    right: { x: -1.90388, y: 2.614711 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 59.705736,
+                  y: 123.231036,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 2.300522, y: -2.228298 },
+                    right: { x: -2.300523, y: 2.228297 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 52.248859,
+                  y: 129.374905,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 2.665441, y: -1.872763 },
+                    right: { x: -2.665442, y: 1.872762 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 43.744813,
+                  y: 134.498493,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 2.998634, y: -1.54811 },
+                    right: { x: -2.998635, y: 1.548109 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 34.288774,
+                  y: 138.694441,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 3.300103, y: -1.254336 },
+                    right: { x: -3.300104, y: 1.254335 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 23.975917,
+                  y: 142.055389,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 3.569847, y: -0.991444 },
+                    right: { x: -3.569848, y: 0.991443 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 12.901414,
+                  y: 144.67398,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 3.807866, y: -0.759431 },
+                    right: { x: -3.807867, y: 0.75943 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 1.160441,
+                  y: 146.642855,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 4.014161, y: -0.5583 },
+                    right: { x: -4.014162, y: 0.558299 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -11.151827,
+                  y: 148.054656,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 4.18873, y: -0.388049 },
+                    right: { x: -4.188731, y: 0.388048 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -23.940217,
+                  y: 149.002024,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 4.331575, y: -0.248678 },
+                    right: { x: -4.331576, y: 0.248677 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -37.109554,
+                  y: 149.5776,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 4.442695, y: -0.140188 },
+                    right: { x: -4.442696, y: 0.140187 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -50.564663,
+                  y: 149.874028,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 4.52209, y: -0.062578 },
+                    right: { x: -4.522091, y: 0.062577 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -64.21037,
+                  y: 149.983947,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 4.56976, y: -0.015849 },
+                    right: { x: -4.569761, y: 0.015848 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -77.9515,
+                  y: 150,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 4.585705, y: 0 },
+                    right: { x: 0, y: 0 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+              ],
+              fill: 'none',
+              stroke: '#333333',
+              linewidth: 10,
+              opacity: 1,
+              visible: true,
+              cap: 'round',
+              join: 'round',
+              miter: '10',
+              closed: true,
+              curved: false,
+              automatic: false,
+              beginning: 0,
+              ending: 1,
+              dashes: [],
+              strokeAttenuation: true,
+            },
+          ],
+        };
+
+        var svg = QUnit.Utils.textToDOM(resp)[0];
+        var shape = two.interpret(svg).subdivide();
+        var group = two.makeGroup();
+
+        group.translation.copy(shape.children[0].translation);
+
+        _.each(shape.children[0].vertices, function (v) {
+          var circle = new Two.Circle(v.x, v.y, 3);
+          circle.noStroke().fill = 'red';
+          group.add(circle);
+        });
+
+        two.update();
+
+        assert.ok(
+          QUnit.Utils.shapeEquals(answer, shape),
+          'Two.subdivide subdivides curveTo and lineTo properly.'
+        );
+        assert.done();
+
+        QUnit.Utils.addElemToTest(assert.test, [two.renderer.domElement, svg]);
+      });
+    })();
+
+    (function () {
+      var two = new Two({
+        width: 400,
+        height: 400,
+      });
+
+      QUnit.Utils.get(
+        './images/interpretation/compound-path.svg',
+        function (resp) {
+          var answer = {
+            isShape: true,
+            translation: { x: 0, y: 0 },
+            scale: { x: 1, y: 1 },
+            skewX: 0,
+            skewY: 0,
+            children: [
+              {
+                isShape: true,
+                translation: { x: 200, y: 200 },
+                scale: 1,
+                skewX: 0,
+                skewY: 0,
+                vertices: [
+                  {
+                    x: -120,
+                    y: 0,
+                    command: 'M',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: 0 },
+                      right: { x: 0, y: 3.248764 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -119.542234,
+                    y: 9.630749,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -0.30285, y: -3.169407 },
+                      right: { x: 0.302849, y: 3.169406 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -118.19687,
+                    y: 19.002473,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -0.591732, y: -3.076081 },
+                      right: { x: 0.591731, y: 3.07608 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -116.005814,
+                    y: 28.073266,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -0.866645, y: -2.968787 },
+                      right: { x: 0.866644, y: 2.968786 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -113.010971,
+                    y: 36.801223,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -1.12759, y: -2.847524 },
+                      right: { x: 1.127589, y: 2.847523 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -109.254244,
+                    y: 45.144441,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -1.374567, y: -2.712294 },
+                      right: { x: 1.374566, y: 2.712293 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -104.77754,
+                    y: 53.061014,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -1.607576, y: -2.563095 },
+                      right: { x: 1.607575, y: 2.563094 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -99.622763,
+                    y: 60.509037,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -1.826616, y: -2.399927 },
+                      right: { x: 1.826615, y: 2.399926 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -93.831816,
+                    y: 67.446606,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -2.031688, y: -2.222792 },
+                      right: { x: 2.031687, y: 2.222791 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -87.446607,
+                    y: 73.831815,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -2.222792, y: -2.031688 },
+                      right: { x: 2.222791, y: 2.031687 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -80.509038,
+                    y: 79.622762,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -2.399927, y: -1.826616 },
+                      right: { x: 2.399926, y: 1.826615 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -73.061015,
+                    y: 84.777539,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -2.563095, y: -1.607576 },
+                      right: { x: 2.563094, y: 1.607575 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -65.144442,
+                    y: 89.254243,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -2.712294, y: -1.374567 },
+                      right: { x: 2.712293, y: 1.374566 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -56.801224,
+                    y: 93.01097,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -2.847524, y: -1.12759 },
+                      right: { x: 2.847523, y: 1.127589 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -48.073267,
+                    y: 96.005813,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -2.968787, y: -0.866645 },
+                      right: { x: 2.968786, y: 0.866644 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -39.002474,
+                    y: 98.196869,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -3.076081, y: -0.591732 },
+                      right: { x: 3.07608, y: 0.591731 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -29.63075,
+                    y: 99.542233,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -3.169407, y: -0.30285 },
+                      right: { x: 3.169406, y: 0.302849 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -20,
+                    y: 100,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -3.248765, y: 0 },
+                      right: { x: 0, y: 0 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -20,
+                    y: 98.005292,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: 1.302666 },
+                      right: { x: 0, y: -1.302667 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -20,
+                    y: 92.346834,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: 2.442499 },
+                      right: { x: 0, y: -2.4425 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -20,
+                    y: 83.513128,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: 3.419499 },
+                      right: { x: 0, y: -3.4195 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -20,
+                    y: 71.992672,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: 4.233665 },
+                      right: { x: 0, y: -4.233666 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -20,
+                    y: 58.273967,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: 4.884998 },
+                      right: { x: 0, y: -4.884999 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -20,
+                    y: 42.845511,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: 5.373498 },
+                      right: { x: 0, y: -5.373499 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -20,
+                    y: 26.195807,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: 5.699165 },
+                      right: { x: 0, y: -5.699166 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -20,
+                    y: 8.813352,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: 5.861998 },
+                      right: { x: 0, y: -5.861999 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -20,
+                    y: -8.813353,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: 5.861998 },
+                      right: { x: 0, y: -5.861999 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -20,
+                    y: -26.195808,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: 5.699165 },
+                      right: { x: 0, y: -5.699166 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -20,
+                    y: -42.845512,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: 5.373498 },
+                      right: { x: 0, y: -5.373499 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -20,
+                    y: -58.273968,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: 4.884998 },
+                      right: { x: 0, y: -4.884999 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -20,
+                    y: -71.992673,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: 4.233665 },
+                      right: { x: 0, y: -4.233666 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -20,
+                    y: -83.513129,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: 3.419499 },
+                      right: { x: 0, y: -3.4195 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -20,
+                    y: -92.346835,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: 2.442499 },
+                      right: { x: 0, y: -2.4425 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -20,
+                    y: -98.005293,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: 1.302666 },
+                      right: { x: 0, y: -1.302667 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -20,
+                    y: -100,
+                    command: 'L',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: 0 },
+                      right: { x: -3.248765, y: 0 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -29.63075,
+                    y: -99.542234,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 3.169406, y: -0.30285 },
+                      right: { x: -3.169407, y: 0.302849 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -39.002474,
+                    y: -98.19687,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 3.07608, y: -0.591732 },
+                      right: { x: -3.076081, y: 0.591731 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -48.073267,
+                    y: -96.005814,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 2.968786, y: -0.866645 },
+                      right: { x: -2.968787, y: 0.866644 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -56.801224,
+                    y: -93.010971,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 2.847523, y: -1.12759 },
+                      right: { x: -2.847524, y: 1.127589 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -65.144442,
+                    y: -89.254244,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 2.712293, y: -1.374567 },
+                      right: { x: -2.712294, y: 1.374566 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -73.061015,
+                    y: -84.77754,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 2.563094, y: -1.607576 },
+                      right: { x: -2.563095, y: 1.607575 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -80.509038,
+                    y: -79.622763,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 2.399926, y: -1.826616 },
+                      right: { x: -2.399927, y: 1.826615 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -87.446607,
+                    y: -73.831816,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 2.222791, y: -2.031688 },
+                      right: { x: -2.222792, y: 2.031687 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -93.831816,
+                    y: -67.446607,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 2.031687, y: -2.222792 },
+                      right: { x: -2.031688, y: 2.222791 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -99.622763,
+                    y: -60.509038,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 1.826615, y: -2.399927 },
+                      right: { x: -1.826616, y: 2.399926 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -104.77754,
+                    y: -53.061015,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 1.607575, y: -2.563095 },
+                      right: { x: -1.607576, y: 2.563094 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -109.254244,
+                    y: -45.144442,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 1.374566, y: -2.712294 },
+                      right: { x: -1.374567, y: 2.712293 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -113.010971,
+                    y: -36.801224,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 1.127589, y: -2.847524 },
+                      right: { x: -1.12759, y: 2.847523 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -116.005814,
+                    y: -28.073267,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0.866644, y: -2.968787 },
+                      right: { x: -0.866645, y: 2.968786 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -118.19687,
+                    y: -19.002474,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0.591731, y: -3.076081 },
+                      right: { x: -0.591732, y: 3.07608 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -119.542234,
+                    y: -9.63075,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0.302849, y: -3.169407 },
+                      right: { x: -0.30285, y: 3.169406 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -120,
+                    y: 0,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: -3.248765 },
+                      right: { x: 0, y: 0 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: -120,
+                    y: 0,
+                    command: 'Z',
+                    relative: true,
+                    controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 20,
+                    y: -100,
+                    command: 'M',
+                    relative: true,
+                    controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 20,
+                    y: -98.005293,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: -1.302667 },
+                      right: { x: 0, y: 1.302666 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 20,
+                    y: -92.346835,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: -2.4425 },
+                      right: { x: 0, y: 2.442499 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 20,
+                    y: -83.513129,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: -3.4195 },
+                      right: { x: 0, y: 3.419499 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 20,
+                    y: -71.992673,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: -4.233666 },
+                      right: { x: 0, y: 4.233665 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 20,
+                    y: -58.273968,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: -4.884999 },
+                      right: { x: 0, y: 4.884998 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 20,
+                    y: -42.845512,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: -5.373499 },
+                      right: { x: 0, y: 5.373498 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 20,
+                    y: -26.195808,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: -5.699166 },
+                      right: { x: 0, y: 5.699165 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 20,
+                    y: -8.813353,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: -5.861999 },
+                      right: { x: 0, y: 5.861998 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 20,
+                    y: 8.813352,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: -5.861999 },
+                      right: { x: 0, y: 5.861998 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 20,
+                    y: 26.195807,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: -5.699166 },
+                      right: { x: 0, y: 5.699165 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 20,
+                    y: 42.845511,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: -5.373499 },
+                      right: { x: 0, y: 5.373498 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 20,
+                    y: 58.273967,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: -4.884999 },
+                      right: { x: 0, y: 4.884998 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 20,
+                    y: 71.992672,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: -4.233666 },
+                      right: { x: 0, y: 4.233665 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 20,
+                    y: 83.513128,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: -3.4195 },
+                      right: { x: 0, y: 3.419499 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 20,
+                    y: 92.346834,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: -2.4425 },
+                      right: { x: 0, y: 2.442499 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 20,
+                    y: 98.005292,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: -1.302667 },
+                      right: { x: 0, y: 1.302666 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 20,
+                    y: 100,
+                    command: 'L',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: 0 },
+                      right: { x: 3.248764, y: 0 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 29.630749,
+                    y: 99.542233,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -3.169407, y: 0.302849 },
+                      right: { x: 3.169406, y: -0.30285 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 39.002473,
+                    y: 98.196869,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -3.076081, y: 0.591731 },
+                      right: { x: 3.07608, y: -0.591732 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 48.073266,
+                    y: 96.005813,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -2.968787, y: 0.866644 },
+                      right: { x: 2.968786, y: -0.866645 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 56.801223,
+                    y: 93.01097,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -2.847524, y: 1.127589 },
+                      right: { x: 2.847523, y: -1.12759 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 65.144441,
+                    y: 89.254243,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -2.712294, y: 1.374566 },
+                      right: { x: 2.712293, y: -1.374567 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 73.061014,
+                    y: 84.777539,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -2.563095, y: 1.607575 },
+                      right: { x: 2.563094, y: -1.607576 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 80.509037,
+                    y: 79.622762,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -2.399927, y: 1.826615 },
+                      right: { x: 2.399926, y: -1.826616 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 87.446606,
+                    y: 73.831815,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -2.222792, y: 2.031687 },
+                      right: { x: 2.222791, y: -2.031688 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 93.831815,
+                    y: 67.446606,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -2.031688, y: 2.222791 },
+                      right: { x: 2.031687, y: -2.222792 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 99.622762,
+                    y: 60.509037,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -1.826616, y: 2.399926 },
+                      right: { x: 1.826615, y: -2.399927 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 104.777539,
+                    y: 53.061014,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -1.607576, y: 2.563094 },
+                      right: { x: 1.607575, y: -2.563095 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 109.254243,
+                    y: 45.144441,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -1.374567, y: 2.712293 },
+                      right: { x: 1.374566, y: -2.712294 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 113.01097,
+                    y: 36.801223,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -1.12759, y: 2.847523 },
+                      right: { x: 1.127589, y: -2.847524 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 116.005813,
+                    y: 28.073266,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -0.866645, y: 2.968786 },
+                      right: { x: 0.866644, y: -2.968787 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 118.196869,
+                    y: 19.002473,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -0.591732, y: 3.07608 },
+                      right: { x: 0.591731, y: -3.076081 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 119.542233,
+                    y: 9.630749,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: -0.30285, y: 3.169406 },
+                      right: { x: 0.302849, y: -3.169407 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 120,
+                    y: 0,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0, y: 3.248764 },
+                      right: { x: 0, y: -3.248765 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 119.542233,
+                    y: -9.63075,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0.302849, y: 3.169406 },
+                      right: { x: -0.30285, y: -3.169407 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 118.196869,
+                    y: -19.002474,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0.591731, y: 3.07608 },
+                      right: { x: -0.591732, y: -3.076081 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 116.005813,
+                    y: -28.073267,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 0.866644, y: 2.968786 },
+                      right: { x: -0.866645, y: -2.968787 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 113.01097,
+                    y: -36.801224,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 1.127589, y: 2.847523 },
+                      right: { x: -1.12759, y: -2.847524 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 109.254243,
+                    y: -45.144442,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 1.374566, y: 2.712293 },
+                      right: { x: -1.374567, y: -2.712294 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 104.777539,
+                    y: -53.061015,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 1.607575, y: 2.563094 },
+                      right: { x: -1.607576, y: -2.563095 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 99.622762,
+                    y: -60.509038,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 1.826615, y: 2.399926 },
+                      right: { x: -1.826616, y: -2.399927 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 93.831815,
+                    y: -67.446607,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 2.031687, y: 2.222791 },
+                      right: { x: -2.031688, y: -2.222792 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 87.446606,
+                    y: -73.831816,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 2.222791, y: 2.031687 },
+                      right: { x: -2.222792, y: -2.031688 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 80.509037,
+                    y: -79.622763,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 2.399926, y: 1.826615 },
+                      right: { x: -2.399927, y: -1.826616 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 73.061014,
+                    y: -84.77754,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 2.563094, y: 1.607575 },
+                      right: { x: -2.563095, y: -1.607576 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 65.144441,
+                    y: -89.254244,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 2.712293, y: 1.374566 },
+                      right: { x: -2.712294, y: -1.374567 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 56.801223,
+                    y: -93.010971,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 2.847523, y: 1.127589 },
+                      right: { x: -2.847524, y: -1.12759 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 48.073266,
+                    y: -96.005814,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 2.968786, y: 0.866644 },
+                      right: { x: -2.968787, y: -0.866645 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 39.002473,
+                    y: -98.19687,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 3.07608, y: 0.591731 },
+                      right: { x: -3.076081, y: -0.591732 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 29.630749,
+                    y: -99.542234,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 3.169406, y: 0.302849 },
+                      right: { x: -3.169407, y: -0.30285 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                  {
+                    x: 20,
+                    y: -100,
+                    command: 'C',
+                    relative: true,
+                    controls: {
+                      left: { x: 3.248764, y: 0 },
+                      right: { x: 0, y: 0 },
+                    },
+                    rx: 0,
+                    ry: 0,
+                    xAxisRotation: 0,
+                    largeArcFlag: 0,
+                    sweepFlag: 1,
+                  },
+                ],
+              },
+            ],
+          };
+          var svg = QUnit.Utils.textToDOM(resp)[0];
+          var shape = two.interpret(svg).subdivide();
+          var group = two.makeGroup();
+
+          group.translation.copy(shape.children[0].translation);
+
+          _.each(shape.children[0].vertices, function (v) {
+            var circle = new Two.Circle(v.x, v.y, 3);
+            circle.noStroke().fill = 'red';
+            group.add(circle);
+          });
+
+          two.update();
+
+          assert.ok(
+            QUnit.Utils.shapeEquals(answer, shape),
+            'Two.subdivide subdivides moveTo properly.'
+          );
+          assert.done();
+
+          QUnit.Utils.addElemToTest(assert.test, [
+            two.renderer.domElement,
+            svg,
+          ]);
+        }
+      );
+    })();
+
+    (function () {
+      var two = new Two({
+        width: 400,
+        height: 400,
+      });
+
+      QUnit.Utils.get('./images/interpretation/donut.svg', function (resp) {
+        var answer = {
+          isShape: true,
+          translation: { x: 0, y: 0 },
+          scale: 1,
+          skewX: 0,
+          skewY: 0,
+          children: [
+            {
+              isShape: true,
+              translation: { x: 200, y: 200.16 },
+              scale: 1,
+              skewX: 0,
+              skewY: 0,
+              vertices: [
+                {
+                  x: 0,
+                  y: -121.338,
+                  command: 'M',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: 0 },
+                    right: { x: -16.753251, y: 0 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -47.230172,
+                  y: -111.802641,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 14.516671, y: -6.140047 },
+                    right: { x: -14.516672, y: 6.140046 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -85.798875,
+                  y: -85.798875,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 10.978937, y: -10.978938 },
+                    right: { x: -10.978938, y: 10.978937 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -111.802641,
+                  y: -47.230172,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 6.140046, y: -14.516672 },
+                    right: { x: -6.140047, y: 14.516671 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -121.338,
+                  y: 0,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -16.753251 },
+                    right: { x: 0, y: 16.75325 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -111.802641,
+                  y: 47.230171,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -6.140047, y: -14.516672 },
+                    right: { x: 6.140046, y: 14.516671 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -85.798875,
+                  y: 85.798875,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -10.978938, y: -10.978938 },
+                    right: { x: 10.978937, y: 10.978937 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -47.230172,
+                  y: 111.80264,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -14.516672, y: -6.140047 },
+                    right: { x: 14.516671, y: 6.140046 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 0,
+                  y: 121.338,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -16.753251, y: 0 },
+                    right: { x: 16.75325, y: 0 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 47.230171,
+                  y: 111.80264,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -14.516672, y: 6.140046 },
+                    right: { x: 14.516671, y: -6.140047 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 85.798875,
+                  y: 85.798875,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -10.978938, y: 10.978937 },
+                    right: { x: 10.978937, y: -10.978938 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 111.80264,
+                  y: 47.230171,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -6.140047, y: 14.516671 },
+                    right: { x: 6.140046, y: -14.516672 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 121.337999,
+                  y: 0,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: 16.75325 },
+                    right: { x: 0, y: -16.753251 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 111.80264,
+                  y: -47.230172,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 6.140046, y: 14.516671 },
+                    right: { x: -6.140047, y: -14.516672 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 85.798874,
+                  y: -85.798875,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 10.978937, y: 10.978937 },
+                    right: { x: -10.978938, y: -10.978938 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 47.230171,
+                  y: -111.802641,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 14.516671, y: 6.140046 },
+                    right: { x: -14.516672, y: -6.140047 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 0,
+                  y: -121.338,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 16.753249, y: 0 },
+                    right: { x: 0, y: 0 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 0,
+                  y: -121.338,
+                  command: 'Z',
+                  relative: true,
+                  controls: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 0,
+                  y: 62.155,
+                  command: 'M',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: 0 },
+                    right: { x: -8.58175, y: 0 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -24.193422,
+                  y: 57.270515,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 7.436109, y: 3.145234 },
+                    right: { x: -7.43611, y: -3.145235 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -43.950125,
+                  y: 43.950125,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 5.623937, y: 5.623937 },
+                    right: { x: -5.623938, y: -5.623938 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -57.270516,
+                  y: 24.193421,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 3.145234, y: 7.436109 },
+                    right: { x: -3.145235, y: -7.43611 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -62.155,
+                  y: 0,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: 8.58175 },
+                    right: { x: 0, y: -8.58175 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -57.270516,
+                  y: -24.193422,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -3.145235, y: 7.436109 },
+                    right: { x: 3.145234, y: -7.43611 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -43.950125,
+                  y: -43.950125,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -5.623938, y: 5.623937 },
+                    right: { x: 5.623937, y: -5.623938 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: -24.193422,
+                  y: -57.270516,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -7.43611, y: 3.145234 },
+                    right: { x: 7.436109, y: -3.145235 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 0,
+                  y: -62.155,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -8.58175, y: 0 },
+                    right: { x: 8.58175, y: 0 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 24.193421,
+                  y: -57.270516,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -7.43611, y: -3.145235 },
+                    right: { x: 7.436109, y: 3.145234 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 43.950124,
+                  y: -43.950125,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -5.623938, y: -5.623938 },
+                    right: { x: 5.623937, y: 5.623937 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 57.270515,
+                  y: -24.193422,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: -3.145235, y: -7.43611 },
+                    right: { x: 3.145234, y: 7.436109 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 62.154999,
+                  y: 0,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 0, y: -8.58175 },
+                    right: { x: 0, y: 8.58175 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 57.270515,
+                  y: 24.193421,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 3.145234, y: -7.43611 },
+                    right: { x: -3.145235, y: 7.436109 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 43.950124,
+                  y: 43.950125,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 5.623937, y: -5.623938 },
+                    right: { x: -5.623938, y: 5.623937 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 24.193421,
+                  y: 57.270515,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 7.436109, y: -3.145235 },
+                    right: { x: -7.43611, y: 3.145234 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+                {
+                  x: 0,
+                  y: 62.155,
+                  command: 'C',
+                  relative: true,
+                  controls: {
+                    left: { x: 8.58175, y: 0 },
+                    right: { x: 0, y: 0 },
+                  },
+                  rx: 0,
+                  ry: 0,
+                  xAxisRotation: 0,
+                  largeArcFlag: 0,
+                  sweepFlag: 1,
+                },
+              ],
+            },
+          ],
+        };
+        var svg = QUnit.Utils.textToDOM(resp)[0];
+        var shape = two.interpret(svg).subdivide(3);
+        var group = two.makeGroup();
+
+        group.translation.copy(shape.children[0].translation);
+
+        _.each(shape.children[0].vertices, function (v) {
+          var circle = new Two.Circle(v.x, v.y, 3);
+          circle.noStroke().fill = 'red';
+          group.add(circle);
+        });
+
+        two.update();
+
+        assert.ok(
+          QUnit.Utils.shapeEquals(answer, shape),
+          'Two.subdivide subdivides holes properly.'
+        );
+        assert.done();
+
+        QUnit.Utils.addElemToTest(assert.test, [two.renderer.domElement, svg]);
+      });
+    })();
+  });
+})();

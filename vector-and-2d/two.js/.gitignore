@@ -1,0 +1,13 @@
+node_modules
+*.DS_Store
+junk/
+*.log
+docs.json
+dist
+.idea
+.codacy
+wiki/.vuepress/.cache/
+wiki/.vuepress/.temp/
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md
