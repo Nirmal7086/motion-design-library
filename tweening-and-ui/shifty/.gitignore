@@ -1,0 +1,7 @@
+*.swp
+.DS_Store
+*.vim
+node_modules/
+dist
+src/coverage
+reports/jest-junit.xml

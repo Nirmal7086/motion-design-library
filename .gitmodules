@@ -1,0 +1,32 @@
+[submodule "video-and-explainers/remotion-skills"]
+	path = video-and-explainers/remotion-skills
+	url = https://github.com/remotion-dev/skills.git
+	branch = main
+[submodule "tweening-and-ui/motion"]
+	path = tweening-and-ui/motion
+	url = https://github.com/motiondivision/motion.git
+	branch = main
+[submodule "vector-and-2d/lottie-web"]
+	path = vector-and-2d/lottie-web
+	url = https://github.com/airbnb/lottie-web.git
+	branch = master
+[submodule "3d/three.js"]
+	path = 3d/three.js
+	url = https://github.com/mrdoob/three.js.git
+	branch = dev
+[submodule "3d/lume"]
+	path = 3d/lume
+	url = https://github.com/lume/lume.git
+	branch = main
+[submodule "3d/babylon.js"]
+	path = 3d/babylon.js
+	url = https://github.com/BabylonJS/Babylon.js.git
+	branch = master
+[submodule "engines-and-apps/godot"]
+	path = engines-and-apps/godot
+	url = https://github.com/godotengine/godot.git
+	branch = master
+[submodule "engines-and-apps/blender"]
+	path = engines-and-apps/blender
+	url = https://github.com/blender/blender.git
+	branch = main

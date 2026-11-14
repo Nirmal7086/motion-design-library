@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  run_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 22
+
+      - name: 'Validate code'
+        run: |
+          npm ci
+          npm run ci
+
+      - name: 'Report test results'
+        uses: dorny/test-reporter@v1
+        with:
+          name: Jest Tests # Name of the check run which will be created
+          path: reports/jest-*.xml # Path to test results
+          reporter: jest-junit # Format of test results
+
+      - name: 'Build code'
+        run: |
+          npm run build
+          npm run doc
+
+      - name: 'Smoke test packaged module'
+        run: npm run test:package
+
+      - name: 'Upload artifacts'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: dist

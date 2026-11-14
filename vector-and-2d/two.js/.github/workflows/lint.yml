@@ -1,0 +1,55 @@
+name: Lint
+
+on: [push, pull_request]
+
+permissions: read-all
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v5
+    - name: Set up Node.js
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+      with:
+        node-version-file: '.nvmrc'
+        cache: 'npm'
+    - name: Install modules
+      run: npm ci
+    - name: Run ESLint
+      run: npm run lint
+    - name: Check TypeScript declarations
+      run: npm run types:check
+    - name: Generate API documentation
+      run: npm run docs:generate
+    - name: Build documentation site
+      run: npm run docs:build
+
+  check-dependency-files:
+    name: Check dependency manifest/lockfile pairs
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v5
+    - name: Verify each Dependabot-managed npm directory has package.json and package-lock.json
+      shell: bash
+      run: |
+        dirs=("." "tests/types" "tests/typescript")
+        ok=true
+        for dir in "${dirs[@]}"; do
+          if [ ! -f "$dir/package.json" ]; then
+            echo "ERROR: $dir/package.json is missing"
+            ok=false
+          fi
+          if [ ! -f "$dir/package-lock.json" ]; then
+            echo "ERROR: $dir/package-lock.json is missing"
+            ok=false
+          fi
+        done
+        if [ "$ok" != "true" ]; then
+          echo ""
+          echo "Every npm directory managed by Dependabot must contain both"
+          echo "package.json and package-lock.json. Run 'npm install' in the"
+          echo "affected directory and commit the result."
+          exit 1
+        fi
+        echo "All dependency file pairs are present."
